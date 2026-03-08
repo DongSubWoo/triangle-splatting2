@@ -573,7 +573,12 @@ class TriangleModel:
     def _sample_alives(self, probs, num, alive_indices=None):
         torch.manual_seed(1)  # always same "random" indices
         probs = probs / (probs.sum() + torch.finfo(torch.float32).eps)
-        sampled_idxs = torch.multinomial(probs, num, replacement=False)
+        #sampled_idxs = torch.multinomial(probs, num, replacement=False)
+        #
+        probs = probs.clamp(min=1e-10)
+        probs = probs / probs.sum()
+        sampled_idxs = torch.multinomial(probs, min(num, (probs > 0).sum().item()), replacement=False)
+        #
         if alive_indices is not None:
             sampled_idxs = alive_indices[sampled_idxs]
         return sampled_idxs        

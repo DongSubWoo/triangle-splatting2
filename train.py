@@ -137,10 +137,11 @@ def training(
 
         # Loss
         gt_image = viewpoint_cam.original_image.cuda()
-        gt_normal = viewpoint_cam.normal_map.cuda()
-        seg_hr = gt_normal.unsqueeze(0)  # -> [1, 3, H, W]
-        seg_ds_area = F.interpolate(seg_hr, size=(gt_image.shape[1], gt_image.shape[2]), mode="area")  # [1, 3, H0, W0]
-        gt_normal = seg_ds_area.squeeze(0)  # -> [3, H0, W0]
+        _nm = viewpoint_cam.normal_map
+        if _nm is not None:
+            _nm = _nm.cuda()
+            _nm = F.interpolate(_nm.unsqueeze(0), size=(gt_image.shape[1], gt_image.shape[2]), mode="area").squeeze(0)
+        gt_normal = _nm
 
         pixel_loss = l1_loss(image, gt_image)
 
@@ -158,9 +159,12 @@ def training(
         rend_normal  = render_pkg['rend_normal']
         lambda_normal = opt.lambda_normals if iteration > opt.iteration_mesh else 0 # 0.001
 
-        normal_error = (1 - (rend_normal * gt_normal).sum(dim=0))[None]
-        normal_loss = lambda_normal * (normal_error).mean()
-        
+        normal_error = (1 - (rend_normal * gt_normal).sum(dim=0))[None] if gt_normal is not None else None
+        if gt_normal is not None:
+            normal_loss = lambda_normal * (normal_error).mean()
+        else:
+            normal_loss = 0
+
         if iteration < opt.start_opacity_floor:
             loss_weight = triangles.get_vertex_weight[triangles._triangle_indices].mean() * lambda_weight
         else:
@@ -191,6 +195,9 @@ def training(
             # Handle pruning operations
             if iteration % 500 == 0:
 
+                if triangles.importance_score.numel() == 0:
+                    print("All triangles pruned, stopping early.")
+                    break
                 print(torch.min(triangles.importance_score))
 
                 # --- Build condition masks (all mean "DELETE") ---
@@ -211,20 +218,21 @@ def training(
                     triangles.prune_triangles(keep_mask)
              
                 # We prune vertices that are no longer used
-                device = triangles.vertices.device
-                used_vertex_mask = torch.zeros(triangles.vertices.shape[0], 
-                                            dtype=torch.bool, 
-                                            device=device)
-                if triangles._triangle_indices.numel() > 0:
-                    # Flatten indices and mark used vertices
-                    flat_indices = triangles._triangle_indices.flatten()
-                    used_vertex_mask[flat_indices] = True
-                
-                # Combine conditions: keep vertices if used OR weight above threshold
-                weight_mask = (triangles.get_vertex_weight.squeeze() >= prune_triangles)
-                vertex_mask = weight_mask | used_vertex_mask
+                if iteration > opt.start_pruning:
+                    device = triangles.vertices.device
+                    used_vertex_mask = torch.zeros(triangles.vertices.shape[0],
+                                                dtype=torch.bool,
+                                                device=device)
+                    if triangles._triangle_indices.numel() > 0:
+                        # Flatten indices and mark used vertices
+                        flat_indices = triangles._triangle_indices.flatten()
+                        used_vertex_mask[flat_indices] = True
 
-                triangles._prune_vertices(vertex_mask)
+                    # Combine conditions: keep vertices if used OR weight above threshold
+                    weight_mask = (triangles.get_vertex_weight.squeeze() >= prune_triangles)
+                    vertex_mask = weight_mask | used_vertex_mask
+
+                    triangles._prune_vertices(vertex_mask)
 
 
                 triangle_vertex_weights = triangles.opacity_activation(

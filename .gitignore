@@ -32,6 +32,8 @@ datasets
 trianglesplatting++
 Runs/*
 triangulation/*
+output/
+Unreal_Export/
 *.bak
 wandb/*
 *.pt

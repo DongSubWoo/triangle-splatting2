@@ -25,4 +25,4 @@ target_include_directories(triangulation PUBLIC ${TRIANGULATION_INCLUDES})
 target_link_libraries(triangulation PUBLIC CUDA::cudart CUDA::cuda_driver TBB::tbb)
 
 target_compile_options(triangulation PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo -O3
-                                       -Wall -Wno-unknown-pragmas> -O3)
+                                       > -O3)
