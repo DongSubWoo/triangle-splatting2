@@ -201,7 +201,6 @@ def training(
                 if triangles.importance_score.numel() == 0:
                     print("All triangles pruned, stopping early.")
                     break
-                print(torch.min(triangles.importance_score))
 
                 # --- Build condition masks (all mean "DELETE") ---
                 triangle_vertex_weights = triangles.opacity_activation(
