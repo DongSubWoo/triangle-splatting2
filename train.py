@@ -182,6 +182,8 @@ def training(
             if iteration % 10 == 0:
                 loss_dict = {
                     "Loss": f"{ema_loss_for_log:.{5}f}",
+                    "Tris": triangles._triangle_indices.shape[0],
+                    "NormL": f"{normal_loss.item():.4f}" if gt_normal is not None else "off",
                 }
                 progress_bar.set_postfix(loss_dict)
                 progress_bar.update(10)
@@ -387,6 +389,8 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[])
     parser.add_argument("--start_checkpoint", type=str, default = None)
     parser.add_argument("--indoor", action="store_true", default=False)
+    parser.add_argument("--cloud_z_min", type=float, default=None, help="Clip initial point cloud below this Y value (NeRF space = UE Z = up axis)")
+    parser.add_argument("--cloud_z_max", type=float, default=None, help="Clip initial point cloud above this Y value (NeRF space = UE Z = up axis)")
 
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
@@ -399,6 +403,8 @@ if __name__ == "__main__":
     safe_state(args.quiet)
 
     lps = lp.extract(args)
+    lps.cloud_z_min = args.cloud_z_min
+    lps.cloud_z_max = args.cloud_z_max
     ops = op.extract(args)
     pps = pp.extract(args)
 

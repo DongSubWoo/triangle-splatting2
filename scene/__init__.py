@@ -53,7 +53,7 @@ class Scene:
             scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval)
         elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
             print("Found transforms_train.json file, assuming Blender data set!")
-            scene_info = sceneLoadTypeCallbacks["Blender"](args.source_path, args.white_background, args.eval)
+            scene_info = sceneLoadTypeCallbacks["Blender"](args.source_path, args.white_background, args.eval, use_normal=getattr(args, 'use_normal', False), cloud_z_min=getattr(args, 'cloud_z_min', None), cloud_z_max=getattr(args, 'cloud_z_max', None))
         else:
             assert False, "Could not recognize scene type!"
 

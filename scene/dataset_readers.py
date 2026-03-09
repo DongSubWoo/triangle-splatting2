@@ -272,7 +272,7 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
                            ply_path=ply_path)
     return scene_info
 
-def readCamerasFromTransforms(path, transformsfile, white_background, extension=".png"):
+def readCamerasFromTransforms(path, transformsfile, white_background, extension=".png", use_normal=False):
     cam_infos = []
 
     with open(os.path.join(path, transformsfile)) as json_file:
@@ -310,23 +310,24 @@ def readCamerasFromTransforms(path, transformsfile, white_background, extension=
             FovX = fovx
 
             normal = None
-            normal_path = os.path.join(path, "normals", image_name + ".png")
-            if os.path.exists(normal_path):
-                normal_image = Image.open(normal_path).convert("RGB")
-                normal_np = np.array(normal_image).astype(np.float32) / 255.0  # [H, W, 3] in [0, 1]
-                normal = (normal_np * 2.0) - 1.0  # decode to [-1, 1]
+            if use_normal:
+                normal_path = os.path.join(path, "normals", image_name + ".png")
+                if os.path.exists(normal_path):
+                    normal_image = Image.open(normal_path).convert("RGB")
+                    normal_np = np.array(normal_image).astype(np.float32) / 255.0  # [H, W, 3] in [0, 1]
+                    normal = (normal_np * 2.0) - 1.0  # decode to [-1, 1]
 
             cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
                             image_path=image_path, image_name=image_name, width=image.size[0], height=image.size[1], normal_map=normal))
             
     return cam_infos
 
-def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
+def readNerfSyntheticInfo(path, white_background, eval, extension=".png", use_normal=False, cloud_z_min=None, cloud_z_max=None):
     print("Reading Training Transforms")
-    train_cam_infos = readCamerasFromTransforms(path, "transforms_train.json", white_background, extension)
+    train_cam_infos = readCamerasFromTransforms(path, "transforms_train.json", white_background, extension, use_normal=use_normal)
     print("Reading Test Transforms")
-    test_cam_infos = readCamerasFromTransforms(path, "transforms_test.json", white_background, extension)
-    
+    test_cam_infos = readCamerasFromTransforms(path, "transforms_test.json", white_background, extension, use_normal=use_normal)
+
     if not eval:
         train_cam_infos.extend(test_cam_infos)
         test_cam_infos = []
@@ -338,15 +339,29 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
         # Since this data set has no colmap data, we start with random points
         num_pts = 30_000
         print(f"Generating random point cloud ({num_pts})...")
-        
+
         # For orbiting cameras (e.g. Unreal export), the scene is at the world
         # origin. Using avg camera position as center is wrong when cameras are
         # skewed toward one hemisphere. Use origin instead.
         scene_center = np.zeros(3)
         object_scale = nerf_normalization["radius"] * 0.3
         xyz = scene_center + (np.random.random((num_pts, 3)) * 2.0 - 1.0) * object_scale
-        shs = np.random.random((num_pts, 3)) / 255.0
-        pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((num_pts, 3)))
+
+        # Print Z range before clipping
+        print(f"Point cloud Y (up-axis) range: [{xyz[:, 1].min():.3f}, {xyz[:, 1].max():.3f}]")
+
+        # Clip by Y axis (NeRF Y = UE Z = up)
+        if cloud_z_min is not None or cloud_z_max is not None:
+            mask = np.ones(len(xyz), dtype=bool)
+            if cloud_z_min is not None:
+                mask &= xyz[:, 1] >= cloud_z_min
+            if cloud_z_max is not None:
+                mask &= xyz[:, 1] <= cloud_z_max
+            xyz = xyz[mask]
+            print(f"After Z clip [{cloud_z_min}, {cloud_z_max}]: {len(xyz)} points remaining")
+
+        shs = np.random.random((len(xyz), 3)) / 255.0
+        pcd = BasicPointCloud(points=xyz, colors=SH2RGB(shs), normals=np.zeros((len(xyz), 3)))
 
         storePly(ply_path, xyz, SH2RGB(shs) * 255)
     try:
