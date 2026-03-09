@@ -46,18 +46,18 @@ RADIUS_MULTIPLIER = 1.7
 
 HORIZONTAL_STEPS  = 12*3   # shots per ring at equator (scaled by cos(elevation))
 VERTICAL_STEPS    = 3*3         # rings per dome half (equator→pole, exclusive of 0°)
-LOWER_DOME_MULTIPLIER = 0.25   # scales HORIZONTAL_STEPS for negative-elevation rings
+LOWER_DOME_MULTIPLIER = 0.0    # 0 = skip all below-horizon shots (not visible in-game)
 
 # --------------------------------------------------------------------------
 # ADAPTIVE DENSITY BOOST (around game camera elevation)
 # --------------------------------------------------------------------------
 GAME_CAMERA_ELEVATION = 46.0
 
-ADAPTIVE_HORIZONTAL_MULTIPLIER = 1.5
-ADAPTIVE_HORIZONTAL_RANGE = 20.0
+ADAPTIVE_HORIZONTAL_MULTIPLIER = 2.0  # was 1.5
+ADAPTIVE_HORIZONTAL_RANGE = 25.0      # was 20.0
 
-ADAPTIVE_ELEVATION_MULTIPLIER = 1.5
-ADAPTIVE_ELEVATION_RANGE = 20.0
+ADAPTIVE_ELEVATION_MULTIPLIER = 2.0   # was 1.5
+ADAPTIVE_ELEVATION_RANGE = 25.0       # was 20.0
 
 # --------------------------------------------------------------------------
 # CAMERA
