@@ -11,14 +11,21 @@ echo Source: %SOURCE%
 echo Model:  %OUTPUT%
 echo.
 
+:: --sh_degree          1       (was 0)
+:: --densify_until_iter 20000  (was 13000 default)
+:: --prune_triangles_threshold 0.18  (was 0.235 default)
+:: --max_points         4000000 (was 3000000 default)
 python train.py -s "%SOURCE%" -m "%OUTPUT%" ^
     --eval ^
     --iterations 30000 ^
-    --save_iterations 5000 10000 15000 20000 25000 30000 ^
-    --test_iterations 5000 10000 15000 20000 25000 30000 ^
+    --save_iterations 5000 10000 20000 30000 ^
+    --test_iterations 5000 10000 20000 30000 ^
     --resolution 1 ^
-    --sh_degree 0 ^
+    --sh_degree 1 ^
     --data_device cpu ^
-    --use_normal
+    --use_normal ^
+    --densify_until_iter 20000 ^
+    --prune_triangles_threshold 0.18 ^
+    --max_points 4000000
 
 pause
