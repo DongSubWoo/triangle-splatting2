@@ -124,7 +124,7 @@ def render(viewpoint_camera, pc : TriangleModel, pipe, bg_color : torch.Tensor, 
     img_hr = render_normal.unsqueeze(0)  # -> [1, 3, H, W]
     img_ds_area = F.interpolate(img_hr, size=(H_init, W_init), mode="area")  # [1, 3, H0, W0]
     render_normal = img_ds_area.squeeze(0)
-    #render_normal = (render_normal.permute(1,2,0) @ (viewpoint_camera.world_view_transform[:3,:3].T)).permute(2,0,1)
+    render_normal = (render_normal.permute(1,2,0) @ (viewpoint_camera.world_view_transform[:3,:3].T)).permute(2,0,1)
     
     # get median depth map
     render_depth_median = allmap[5:6]

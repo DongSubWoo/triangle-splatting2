@@ -157,9 +157,10 @@ def training(
 
         # loss normal and distortion
         rend_normal  = render_pkg['rend_normal']
+        rend_alpha   = render_pkg['rend_alpha'].detach()
         lambda_normal = opt.lambda_normals if iteration > opt.iteration_mesh else 0 # 0.001
 
-        normal_error = (1 - (rend_normal * gt_normal).sum(dim=0))[None] if gt_normal is not None else None
+        normal_error = (1 - (F.normalize(rend_normal, dim=0) * F.normalize(gt_normal, dim=0)).sum(dim=0))[None] * (rend_alpha > 0.5).float() if gt_normal is not None else None
         if gt_normal is not None:
             normal_loss = lambda_normal * (normal_error).mean()
         else:
